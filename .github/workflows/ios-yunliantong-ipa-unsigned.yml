@@ -50,13 +50,17 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="" \
             PROVISIONING_PROFILE="" \
             EXPANDED_CODE_SIGN_IDENTITY="" \
-            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_STYLE=Automatic \
+            ONLY_ACTIVE_ARCH=NO \
             PRODUCT_BUNDLE_IDENTIFIER=com.guanglian.tim \
             INFOPLIST_KEY_CFBundleDisplayName="云链通" \
             2>&1 | tee build/xcodebuild.log
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo "::error::xcodebuild failed — see errors below"
-            grep -E 'error:|fatal error:|BUILD FAILED|Code Sign error|No profiles|Signing for' build/xcodebuild.log | tail -n 40 || true
+            echo ""
+            echo "========== BUILD ERRORS (search for these) =========="
+            grep -nE ': error:|fatal error:|BUILD FAILED|Code Sign error|No profiles|Signing for|ld: |clang: error' build/xcodebuild.log | tail -n 50 || true
+            echo "========== END ERRORS =========="
+            echo ""
             echo "--- last 80 lines ---"
             tail -n 80 build/xcodebuild.log || true
             exit 65
