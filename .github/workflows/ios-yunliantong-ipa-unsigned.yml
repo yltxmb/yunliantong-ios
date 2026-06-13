@@ -26,6 +26,11 @@ jobs:
           gem install cocoapods -v 1.15.2 --no-document
           pod install --repo-update
 
+      - name: Prepare unsigned export
+        run: |
+          chmod +x scripts/ci-unsigned-export-prep.sh
+          ./scripts/ci-unsigned-export-prep.sh
+
       - name: Build Release for iOS device (no code sign)
         run: |
           set -o pipefail
@@ -42,8 +47,17 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
+            PROVISIONING_PROFILE="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual \
             PRODUCT_BUNDLE_IDENTIFIER=com.guanglian.tim \
-            INFOPLIST_KEY_CFBundleDisplayName="云链通"
+            INFOPLIST_KEY_CFBundleDisplayName="云链通" \
+            2>&1 | tee build/xcodebuild.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "::error::xcodebuild failed"
+            tail -n 80 build/xcodebuild.log || true
+            exit 65
+          fi
 
       - name: Package IPA
         run: |
