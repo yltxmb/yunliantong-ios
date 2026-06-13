@@ -26,11 +26,21 @@ perl -i -pe '
 ' "$PBX"
 
 # 真机构建时 pushservice 扩展常因描述文件失败；CI 未签名包先不嵌扩展（主 App 仍可重签安装）
-perl -i -pe '
-  s/\t\t\t\t48DF2C49253FE1B800BC522F \/\* PBXTargetDependency \*\/,\n//;
-  s/\t\t\t\t48DF2C4F253FE1B800BC522F \/\* Embed App Extensions \*\/,\n//;
-  s/\t\t\t\t48DF2C4A253FE1B800BC522F \/\* pushservice\.appex in Embed App Extensions \*\/,\n//;
-' "$PBX"
+# 注意：perl -pe 按行处理，不能用 \n 跨行匹配；用 sed 删整行
+sed -i '' \
+  '/48DF2C49253FE1B800BC522F \/\* PBXTargetDependency \*\//d' \
+  '/48DF2C4F253FE1B800BC522F \/\* Embed App Extensions \*\//d' \
+  '/48DF2C4A253FE1B800BC522F \/\* pushservice\.appex in Embed App Extensions \*\//d' \
+  "$PBX"
+
+if grep -Fq '48DF2C49253FE1B800BC522F /* PBXTargetDependency */' "$PBX"; then
+  echo "::error::CI prep failed: pushservice dependency still present in project.pbxproj"
+  exit 1
+fi
+if grep -Fq '48DF2C4F253FE1B800BC522F /* Embed App Extensions */' "$PBX"; then
+  echo "::error::CI prep failed: Embed App Extensions phase still linked to TUIKitDemo"
+  exit 1
+fi
 
 echo "Prepared project for unsigned CI export"
 echo "--- TUIKitDemo Release signing (after prep) ---"

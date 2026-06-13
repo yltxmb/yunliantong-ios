@@ -56,13 +56,26 @@ jobs:
             INFOPLIST_KEY_CFBundleDisplayName="云链通" \
             2>&1 | tee build/xcodebuild.log
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            ERR_FILE=build/xcodebuild-errors.txt
+            grep -nE ': error:|fatal error:|BUILD FAILED|Code Sign error|No profiles|Signing for|ld: |clang: error' build/xcodebuild.log | tail -n 50 > "$ERR_FILE" || true
             echo ""
             echo "========== BUILD ERRORS (search for these) =========="
-            grep -nE ': error:|fatal error:|BUILD FAILED|Code Sign error|No profiles|Signing for|ld: |clang: error' build/xcodebuild.log | tail -n 50 || true
+            cat "$ERR_FILE" || true
             echo "========== END ERRORS =========="
             echo ""
             echo "--- last 80 lines ---"
             tail -n 80 build/xcodebuild.log || true
+            if [ -s "$ERR_FILE" ]; then
+              while IFS= read -r line; do
+                echo "::error::$line"
+              done < "$ERR_FILE"
+              {
+                echo "## xcodebuild errors"
+                echo '```'
+                cat "$ERR_FILE"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
             exit 65
           fi
 
@@ -71,7 +84,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: xcodebuild-log
-          path: Tencentim/TencentCloud-TIMSDK/iOS/Demo/build/xcodebuild.log
+          path: |
+            Tencentim/TencentCloud-TIMSDK/iOS/Demo/build/xcodebuild.log
+            Tencentim/TencentCloud-TIMSDK/iOS/Demo/build/xcodebuild-errors.txt
           if-no-files-found: ignore
 
       - name: Package IPA
