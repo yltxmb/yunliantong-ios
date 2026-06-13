@@ -14,7 +14,7 @@
 #import "YLTForgotPasswordViewController.h"
 #import "TUIThemeManager.h"
 #import "TUIUtil.h"
-#import <TUICore/TUITool.h>
+#import <TIMCommon/TIMDefine.h>
 
 @interface LoginController ()
 @property (weak, nonatomic) IBOutlet UITextField *user;
@@ -151,21 +151,21 @@
     }
     self.loginInFlight = YES;
     self.loginButton.enabled = NO;
-    [TUITool makeToastActivity:TUICSToastPositionCenter];
+    [self.view makeToastActivity:TUICSToastPositionCenter];
     [YLTServerUserSigFetcher fetchUserId:phone password:password callback:^(BOOL ok, uint32_t sdkAppId, NSString *userSig, NSString *imUserId, NSString *txId, NSString *error) {
         self.loginInFlight = NO;
         self.loginButton.enabled = YES;
         if (!ok) {
-            [TUITool hideToastActivity];
+            [self.view hideToastActivity];
             [self alertText:error ?: @"登录失败"];
             return;
         }
         [[YLTLoginSession shared] saveWithSDKAppId:sdkAppId userId:imUserId userSig:userSig phone:phone txId:txId password:password];
         AppDelegate *delegate = (AppDelegate *)UIApplication.sharedApplication.delegate;
         [delegate loginSDK:imUserId userSig:userSig succ:^{
-            [TUITool hideToastActivity];
+            [self.view hideToastActivity];
         } fail:^(int code, NSString *msg) {
-            [TUITool hideToastActivity];
+            [self.view hideToastActivity];
             [self alertText:[NSString stringWithFormat:@"IM 登录失败 (%d): %@", code, msg ?: @""]];
         }];
     }];
