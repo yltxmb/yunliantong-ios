@@ -5,3 +5,5 @@ DerivedData/
 xcuserdata/
 *.ipa
 *.dSYM.zip
+scripts/node_modules/
+scripts/package-lock.json
