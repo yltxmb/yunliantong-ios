@@ -3,7 +3,6 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PBX="$ROOT/TUIKitDemo.xcodeproj/project.pbxproj"
-SCHEME="$ROOT/TUIKitDemo.xcodeproj/xcshareddata/xcschemes/TUIKitDemo.xcscheme"
 ENT="$ROOT/TUIKitDemo/ci-empty.entitlements"
 
 cp "$PBX" "$PBX.ci.bak"
@@ -53,10 +52,7 @@ pbx_path.write_text(text, encoding="utf-8")
 print("Removed pushservice dependency/embed from TUIKitDemo target")
 PY
 
-# 避免 scheme 隐式构建 pushservice
-if [ -f "$SCHEME" ]; then
-  perl -i -pe 's/buildImplicitDependencies = "YES"/buildImplicitDependencies = "NO"/g' "$SCHEME"
-fi
+# 注意：不要关 buildImplicitDependencies，否则 CocoaPods 依赖不会参与编译（TUILogin.h / ImSDK_Plus 找不到）
 
 echo "Prepared project for unsigned CI export"
 echo "--- TUIKitDemo Release signing (after prep) ---"
