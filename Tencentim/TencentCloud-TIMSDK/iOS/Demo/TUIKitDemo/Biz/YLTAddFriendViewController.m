@@ -1,7 +1,7 @@
 #import "YLTAddFriendViewController.h"
 #import "YLTDisplayNameHelper.h"
+#import "TUIC2CChatViewController.h"
 #import <ImSDK_Plus/ImSDK_Plus.h>
-#import <TUICore/TUICore.h>
 #import <TUICore/TUILogin.h>
 #import <SDWebImage/UIImageView+WebCache.h>
 
@@ -93,7 +93,7 @@
 - (void)checkFriendship {
     [[V2TIMManager sharedInstance] checkFriend:@[self.userId] checkType:V2TIM_FRIEND_TYPE_SINGLE succ:^(NSArray<V2TIMFriendCheckResult *> *resultList) {
         V2TIMFriendCheckResult *r = resultList.firstObject;
-        self.isFriend = (r.resultType == V2TIM_FRIEND_RELATION_TYPE_IN_MY_FRIEND_LIST || r.resultType == V2TIM_FRIEND_RELATION_TYPE_BOTH_WAY);
+        self.isFriend = (r.relationType == V2TIM_FRIEND_RELATION_TYPE_IN_MY_FRIEND_LIST || r.relationType == V2TIM_FRIEND_RELATION_TYPE_BOTH_WAY);
         [self refreshUI];
     } fail:^(int code, NSString *desc) {
     }];
@@ -122,7 +122,7 @@
     req.userID = self.userId;
     req.addSource = @"AddSource_Type_QRCode";
     req.addType = V2TIM_FRIEND_TYPE_BOTH;
-    [[V2TIMManager sharedInstance] addFriend:req succ:^{
+    [[V2TIMManager sharedInstance] addFriend:req succ:^(V2TIMFriendOperationResult *result) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"已发送" message:@"好友请求已发送" preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             [self.navigationController popViewControllerAnimated:YES];
@@ -136,16 +136,12 @@
 }
 
 - (void)openChat {
-    NSDictionary *param = @{
-        TUICore_TUIChatService_GetChatViewControllerMethod_UserIDKey: self.userId ?: @"",
-        TUICore_TUIChatService_GetChatViewControllerMethod_TitleKey: [YLTDisplayNameHelper labelForUserId:self.userId] ?: @"",
-    };
-    UIViewController *chatVC = (UIViewController *)[TUICore callService:TUICore_TUIChatService
-                                                                 method:TUICore_TUIChatService_GetChatViewControllerMethod
-                                                                  param:param];
-    if (chatVC) {
-        [self.navigationController pushViewController:chatVC animated:YES];
-    }
+    TUIChatConversationModel *conversationData = [[TUIChatConversationModel alloc] init];
+    conversationData.userID = self.userId;
+    conversationData.title = [YLTDisplayNameHelper labelForUserId:self.userId];
+    TUIC2CChatViewController *chatVC = [[TUIC2CChatViewController alloc] init];
+    chatVC.conversationData = conversationData;
+    [self.navigationController pushViewController:chatVC animated:YES];
 }
 
 @end
