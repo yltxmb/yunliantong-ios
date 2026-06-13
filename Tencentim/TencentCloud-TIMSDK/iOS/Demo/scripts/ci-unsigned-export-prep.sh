@@ -3,6 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PBX="$ROOT/TUIKitDemo.xcodeproj/project.pbxproj"
+SCHEME="$ROOT/TUIKitDemo.xcodeproj/xcshareddata/xcschemes/TUIKitDemo.xcscheme"
 ENT="$ROOT/TUIKitDemo/ci-empty.entitlements"
 
 cp "$PBX" "$PBX.ci.bak"
@@ -26,20 +27,34 @@ perl -i -pe '
 ' "$PBX"
 
 # 真机构建时 pushservice 扩展常因描述文件失败；CI 未签名包先不嵌扩展（主 App 仍可重签安装）
-# 注意：perl -pe 按行处理，不能用 \n 跨行匹配；用 sed 删整行
-sed -i '' \
-  '/48DF2C49253FE1B800BC522F \/\* PBXTargetDependency \*\//d' \
-  '/48DF2C4F253FE1B800BC522F \/\* Embed App Extensions \*\//d' \
-  '/48DF2C4A253FE1B800BC522F \/\* pushservice\.appex in Embed App Extensions \*\//d' \
-  "$PBX"
+python3 - "$PBX" <<'PY'
+from pathlib import Path
+import sys
 
-if grep -Fq '48DF2C49253FE1B800BC522F /* PBXTargetDependency */' "$PBX"; then
-  echo "::error::CI prep failed: pushservice dependency still present in project.pbxproj"
-  exit 1
-fi
-if grep -Fq '48DF2C4F253FE1B800BC522F /* Embed App Extensions */' "$PBX"; then
-  echo "::error::CI prep failed: Embed App Extensions phase still linked to TUIKitDemo"
-  exit 1
+pbx_path = Path(sys.argv[1])
+text = pbx_path.read_text(encoding="utf-8")
+replacements = [
+    "\t\t\t\t48DF2C49253FE1B800BC522F /* PBXTargetDependency */,\n",
+    "\t\t\t\t48DF2C4F253FE1B800BC522F /* Embed App Extensions */,\n",
+    "\t\t\t\t48DF2C4A253FE1B800BC522F /* pushservice.appex in Embed App Extensions */,\n",
+]
+for needle in replacements:
+    if needle not in text:
+        print(f"::warning::CI prep: line not found (may already removed): {needle.strip()}")
+    text = text.replace(needle, "")
+if "\t\t\t\t48DF2C49253FE1B800BC522F /* PBXTargetDependency */," in text:
+    print("::error::CI prep failed: TUIKitDemo still depends on pushservice")
+    sys.exit(1)
+if "\t\t\t\t48DF2C4F253FE1B800BC522F /* Embed App Extensions */," in text:
+    print("::error::CI prep failed: TUIKitDemo still embeds App Extensions")
+    sys.exit(1)
+pbx_path.write_text(text, encoding="utf-8")
+print("Removed pushservice dependency/embed from TUIKitDemo target")
+PY
+
+# 避免 scheme 隐式构建 pushservice
+if [ -f "$SCHEME" ]; then
+  perl -i -pe 's/buildImplicitDependencies = "YES"/buildImplicitDependencies = "NO"/g' "$SCHEME"
 fi
 
 echo "Prepared project for unsigned CI export"
