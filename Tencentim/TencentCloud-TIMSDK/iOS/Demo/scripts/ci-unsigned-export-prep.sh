@@ -54,6 +54,10 @@ PY
 
 # 注意：不要关 buildImplicitDependencies，否则 CocoaPods 依赖不会参与编译（TUILogin.h / ImSDK_Plus 找不到）
 
+if [ -x "$ROOT/scripts/patch-tuicallkit-swift-xcode16.sh" ]; then
+  bash "$ROOT/scripts/patch-tuicallkit-swift-xcode16.sh"
+fi
+
 echo "Prepared project for unsigned CI export"
 echo "--- TUIKitDemo Release signing (after prep) ---"
 awk '/CF01449A216E1A4B00C12E35 \/\* Release \*\//,/^[\t ]*\};$/' "$PBX" \

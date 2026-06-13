@@ -67,4 +67,10 @@ post_install do |installer|
             
         end
     end
+
+    # RTCRoomEngine 新增 .onSuggestSwitchToCellular，旧版 TUICallKit_Swift 在 Xcode 16 下 switch 不完整
+    patch_script = File.join(__dir__, 'scripts/patch-tuicallkit-swift-xcode16.sh')
+    if File.exist?(patch_script)
+      system('bash', patch_script) or raise('patch-tuicallkit-swift-xcode16.sh failed')
+    end
 end
