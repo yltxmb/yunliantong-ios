@@ -38,7 +38,7 @@ static NSString *const kLastSeenKey = @"YLT_MomentsLastSeenMs";
         return;
     }
     long long since = [self lastSeenMs];
-    [YLTMomentsApi fetchNotificationCountsSinceMs:since callback:^(BOOL ok, YLTMomentsNotificationCounts *counts) {
+    [YLTMomentsApi fetchNotificationCountsSinceMs:since callback:^(BOOL ok, YLTMomentsNotificationCounts *counts, NSString *error) {
         if (!ok || !counts) {
             return;
         }
