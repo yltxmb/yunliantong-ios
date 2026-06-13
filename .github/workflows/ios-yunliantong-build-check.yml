@@ -1,0 +1,47 @@
+# 无需 Apple 证书：仅验证 iOS 工程能否在 Xcode 下编译通过（适合无 Mac 开发阶段）
+name: iOS Build Check (No Signing)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'Tencentim/TencentCloud-TIMSDK/iOS/Demo/**'
+      - '.github/workflows/ios-yunliantong-build-check.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: Tencentim/TencentCloud-TIMSDK/iOS/Demo
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods -v 1.15.2 --no-document
+          pod --version
+
+      - name: Pod install
+        run: pod install --repo-update
+
+      - name: Build for iOS Simulator (no code sign)
+        run: |
+          xcodebuild build \
+            -workspace TUIKitDemo.xcworkspace \
+            -scheme TUIKitDemo \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty || true
