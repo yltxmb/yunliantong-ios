@@ -7,6 +7,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)refreshInBackground:(nullable void (^)(BOOL ok))callback;
 + (BOOL)syncFetch;
 + (nullable NSDictionary *)fetchRemote;
++ (void)persist:(NSDictionary *)config;
 + (nullable NSDictionary *)cachedConfigObject;
 + (BOOL)isMaintenanceFromCache;
 + (NSString *)maintenanceMessageFromCache;
