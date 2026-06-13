@@ -13,14 +13,17 @@ cat > "$ENT" <<'EOF'
 <plist version="1.0"><dict></dict></plist>
 EOF
 
-# 仅影响 TUIKitDemo Release 里写死的生产描述文件 / 团队
-sed -i '' \
-  -e 's/PROVISIONING_PROFILE_SPECIFIER = com.imchat.imchat_Production_SignProvision;/PROVISIONING_PROFILE_SPECIFIER = "";/g' \
-  -e 's/DEVELOPMENT_TEAM = FN2V63AD2J;/DEVELOPMENT_TEAM = "";/g' \
-  -e 's/CODE_SIGN_ENTITLEMENTS = TUIKitDemo\/TUIKitDemo.entitlements;/CODE_SIGN_ENTITLEMENTS = TUIKitDemo\/ci-empty.entitlements;/g' \
-  "$PBX"
-
-# TUIKitDemo Release 块里的 Distribution 身份（pushservice 等同字符串，CI 只编 TUIKitDemo scheme）
-sed -i '' 's/CODE_SIGN_IDENTITY = "iPhone Distribution";/CODE_SIGN_IDENTITY = "";/g' "$PBX"
+# 清空所有 target 的签名（CI 只编 TUIKitDemo，但 Pods/扩展 target 也可能触发签名检查）
+perl -i -pe '
+  s/DEVELOPMENT_TEAM = [^;]+;/DEVELOPMENT_TEAM = "";/g;
+  s/"DEVELOPMENT_TEAM\[sdk=iphoneos\*\]" = [^;]+;/"DEVELOPMENT_TEAM[sdk=iphoneos*]" = "";/g;
+  s/PROVISIONING_PROFILE_SPECIFIER = [^;]+;/PROVISIONING_PROFILE_SPECIFIER = "";/g;
+  s/"PROVISIONING_PROFILE_SPECIFIER\[sdk=iphoneos\*\]" = [^;]+;/"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "";/g;
+  s/CODE_SIGN_IDENTITY = "[^"]*";/CODE_SIGN_IDENTITY = "";/g;
+  s/CODE_SIGN_ENTITLEMENTS = TUIKitDemo\/TUIKitDemo\.entitlements;/CODE_SIGN_ENTITLEMENTS = TUIKitDemo\/ci-empty.entitlements;/g;
+' "$PBX"
 
 echo "Prepared project for unsigned CI export"
+echo "--- TUIKitDemo Release signing (after prep) ---"
+awk '/CF01449A216E1A4B00C12E35 \/\* Release \*\//,/^[\t ]*\};$/' "$PBX" \
+  | grep -E 'CODE_SIGN|DEVELOPMENT_TEAM|PROVISIONING_PROFILE' || true

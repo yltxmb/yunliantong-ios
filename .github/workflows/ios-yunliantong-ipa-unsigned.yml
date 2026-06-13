@@ -55,10 +55,20 @@ jobs:
             INFOPLIST_KEY_CFBundleDisplayName="云链通" \
             2>&1 | tee build/xcodebuild.log
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo "::error::xcodebuild failed"
+            echo "::error::xcodebuild failed — see errors below"
+            grep -E 'error:|fatal error:|BUILD FAILED|Code Sign error|No profiles|Signing for' build/xcodebuild.log | tail -n 40 || true
+            echo "--- last 80 lines ---"
             tail -n 80 build/xcodebuild.log || true
             exit 65
           fi
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: Tencentim/TencentCloud-TIMSDK/iOS/Demo/build/xcodebuild.log
+          if-no-files-found: ignore
 
       - name: Package IPA
         run: |
