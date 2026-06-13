@@ -28,6 +28,8 @@ jobs:
 
       - name: Build Release for iOS device (no code sign)
         run: |
+          set -o pipefail
+          rm -rf build/DerivedData build/ipa_out build/YunLianTong-unsigned.ipa
           xcodebuild build \
             -workspace TUIKitDemo.xcworkspace \
             -scheme TUIKitDemo \
@@ -41,27 +43,47 @@ jobs:
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             PRODUCT_BUNDLE_IDENTIFIER=com.guanglian.tim \
-            INFOPLIST_KEY_CFBundleDisplayName="云链通" \
-            | xcpretty || true
+            INFOPLIST_KEY_CFBundleDisplayName="云链通"
 
       - name: Package IPA
         run: |
-          APP=$(find build/DerivedData -name 'TUIKitDemo.app' -type d 2>/dev/null | head -1)
+          set -e
+          APP=$(find build/DerivedData/Build/Products -name 'TUIKitDemo.app' -type d 2>/dev/null | head -1)
           if [ -z "$APP" ]; then
-            echo "::error::TUIKitDemo.app not found"
-            find build -type d -name '*.app' || true
+            echo "::error::TUIKitDemo.app not found under Build/Products"
+            find build/DerivedData -type d -name '*.app' || true
             exit 1
           fi
-          echo "Packaging: $APP"
+          echo "Using app bundle: $APP"
+          du -sh "$APP"
+          EXEC=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist" 2>/dev/null || echo TUIKitDemo)
+          BIN="$APP/$EXEC"
+          if [ ! -f "$BIN" ]; then
+            echo "::error::Missing executable: $BIN"
+            ls -la "$APP" || true
+            exit 1
+          fi
+          BIN_SIZE=$(stat -f%z "$BIN")
+          echo "Executable size: $BIN_SIZE bytes"
+          if [ "$BIN_SIZE" -lt 1000000 ]; then
+            echo "::error::Executable too small ($BIN_SIZE bytes) — build incomplete"
+            exit 1
+          fi
           rm -rf build/ipa_out
           mkdir -p build/ipa_out/Payload
-          ditto "$APP" build/ipa_out/Payload/TUIKitDemo.app
-          cd build/ipa_out
-          zip -qr ../YunLianTong-unsigned.ipa Payload
-          ls -lh ../YunLianTong-unsigned.ipa
+          ditto "$APP" "build/ipa_out/Payload/$(basename "$APP")"
+          (cd build/ipa_out && zip -qr ../YunLianTong-unsigned.ipa Payload)
+          IPA_SIZE=$(stat -f%z build/YunLianTong-unsigned.ipa)
+          echo "IPA size: $IPA_SIZE bytes"
+          ls -lh build/YunLianTong-unsigned.ipa
+          if [ "$IPA_SIZE" -lt 5000000 ]; then
+            echo "::error::IPA too small ($IPA_SIZE bytes), expected tens of MB"
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: YunLianTong-IPA-unsigned
           path: Tencentim/TencentCloud-TIMSDK/iOS/Demo/build/YunLianTong-unsigned.ipa
+          if-no-files-found: error
