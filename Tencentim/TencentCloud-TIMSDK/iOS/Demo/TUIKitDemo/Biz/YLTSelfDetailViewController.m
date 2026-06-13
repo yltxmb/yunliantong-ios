@@ -248,7 +248,7 @@ typedef NS_ENUM(NSInteger, YLTSelfDetailRow) {
     UIDatePicker *picker = [[UIDatePicker alloc] init];
     picker.datePickerMode = UIDatePickerModeDate;
     if (@available(iOS 13.4, *)) {
-        picker.preferredDatePickerStyle = UIDatePickerDatePickerStyleWheels;
+        picker.preferredDatePickerStyle = UIDatePickerStyleWheels;
     }
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"生日" message:@"\n\n\n\n\n\n\n\n\n" preferredStyle:UIAlertControllerStyleAlert];
     [alert.view addSubview:picker];
