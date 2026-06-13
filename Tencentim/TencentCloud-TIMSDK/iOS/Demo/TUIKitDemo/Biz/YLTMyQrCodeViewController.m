@@ -3,6 +3,7 @@
 #import "YLTLoginSession.h"
 #import <TUICore/TUILogin.h>
 #import <Photos/Photos.h>
+#import <CoreImage/CoreImage.h>
 
 @implementation YLTMyQrCodeViewController {
     UIImageView *_qrView;

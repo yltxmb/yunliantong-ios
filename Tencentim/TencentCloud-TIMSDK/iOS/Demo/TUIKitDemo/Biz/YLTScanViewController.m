@@ -4,6 +4,7 @@
 #import "YLTLoginSession.h"
 #import <TUICore/TUICore.h>
 #import <TUICore/TUILogin.h>
+#import <TUICore/TUITool.h>
 #import <PhotosUI/PhotosUI.h>
 #import <Vision/Vision.h>
 #import <CoreImage/CoreImage.h>
