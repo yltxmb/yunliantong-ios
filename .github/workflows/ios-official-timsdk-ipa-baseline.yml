@@ -1,0 +1,114 @@
+# 从腾讯官方 TIMSDK 仓库拉最新代码，打对照 IPA（排查云链通改动是否导致安装失败）
+name: Export Official TIMSDK IPA (Baseline)
+
+on:
+  workflow_dispatch:
+    inputs:
+      timsdk_ref:
+        description: 'TencentCloud/TIMSDK branch or tag'
+        required: false
+        default: 'master'
+
+jobs:
+  export-official-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout tooling scripts
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+
+      - name: Clone official TencentCloud/TIMSDK
+        run: |
+          set -e
+          rm -rf build/official/TIMSDK
+          git clone --depth 1 --branch "${{ inputs.timsdk_ref }}" \
+            https://github.com/TencentCloud/TIMSDK.git build/official/TIMSDK
+          echo "TIMSDK commit: $(git -C build/official/TIMSDK rev-parse HEAD)"
+
+      - name: Copy CI scripts into official Demo
+        run: |
+          set -e
+          DEMO="build/official/TIMSDK/iOS/Demo"
+          mkdir -p "$DEMO/scripts"
+          SRC="Tencentim/TencentCloud-TIMSDK/iOS/Demo/scripts"
+          cp "$SRC/patch-tuicallkit-swift-xcode16.sh" "$DEMO/scripts/"
+          cp "$SRC/ci-adhoc-sign-app.sh" "$DEMO/scripts/"
+          cp "$SRC/ci-validate-resign-ipa.sh" "$DEMO/scripts/"
+          cp "$SRC/ci-unsigned-export-prep-official.sh" "$DEMO/scripts/ci-unsigned-export-prep.sh"
+          chmod +x "$DEMO/scripts/"*.sh
+
+      - name: Install CocoaPods and prepare official project
+        working-directory: build/official/TIMSDK/iOS/Demo
+        run: |
+          set -e
+          ./scripts/ci-unsigned-export-prep.sh
+          gem install cocoapods -v 1.15.2 --no-document
+          pod install --repo-update
+          bash scripts/patch-tuicallkit-swift-xcode16.sh
+
+      - name: Build Release (official, no code sign)
+        working-directory: build/official/TIMSDK/iOS/Demo
+        run: |
+          set -o pipefail
+          mkdir -p build
+          rm -rf build/DerivedData build/ipa_out build/TUIKitDemo-official-unsigned.ipa
+          xcodebuild build \
+            -workspace TUIKitDemo.xcworkspace \
+            -scheme TUIKitDemo \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$PWD/build/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            PROVISIONING_PROFILE="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            2>&1 | tee build/xcodebuild.log
+          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo "::error::Official TIMSDK xcodebuild failed"
+            tail -n 80 build/xcodebuild.log || true
+            exit 65
+          fi
+
+      - name: Package official IPA
+        working-directory: build/official/TIMSDK/iOS/Demo
+        run: |
+          set -e
+          APP=$(find build/DerivedData/Build/Products -name 'TUIKitDemo.app' -type d 2>/dev/null | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::TUIKitDemo.app not found"
+            exit 1
+          fi
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          echo "Official Bundle ID: $BUNDLE_ID"
+          echo "## Official baseline IPA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- TIMSDK ref: \`${{ inputs.timsdk_ref }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bundle ID: \`$BUNDLE_ID\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Upload to resign platform with this Bundle ID (not com.guanglian.tim)" >> "$GITHUB_STEP_SUMMARY"
+          ./scripts/ci-adhoc-sign-app.sh "$APP"
+          rm -rf build/ipa_out
+          mkdir -p build/ipa_out/Payload
+          ditto "$APP" "build/ipa_out/Payload/$(basename "$APP")"
+          (cd build/ipa_out && zip -qr ../TUIKitDemo-official-unsigned.ipa Payload)
+          ./scripts/ci-validate-resign-ipa.sh build/TUIKitDemo-official-unsigned.ipa
+          ls -lh build/TUIKitDemo-official-unsigned.ipa
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TIMSDK-Official-IPA-baseline
+          path: build/official/TIMSDK/iOS/Demo/build/TUIKitDemo-official-unsigned.ipa
+          if-no-files-found: error
