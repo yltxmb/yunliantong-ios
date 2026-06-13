@@ -7,3 +7,4 @@ xcuserdata/
 *.dSYM.zip
 scripts/node_modules/
 scripts/package-lock.json
+TUIKitDemo/ci-resign-placeholder.entitlements

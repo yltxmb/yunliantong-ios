@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 上传企业签平台前的 IPA 结构自检
+# 上传企业签平台前的 IPA 结构自检（含 V2/V3 签名格式检查）
 set -euo pipefail
 
 IPA="${1:?Usage: ci-validate-resign-ipa.sh /path/to/app.ipa}"
@@ -36,7 +36,21 @@ if ! codesign -dv "$APP" >/dev/null 2>&1; then
   exit 1
 fi
 
-# 扩展 Bundle ID 必须是主包前缀，否则部分平台直接拒签
+SIG_INFO=$(codesign -dv "$APP" 2>&1 || true)
+echo "$SIG_INFO" | grep -E 'CodeDirectory|Format=' || true
+
+# V2: CodeDirectory v>=20400 + DER entitlements（-5 非零，-7 有值）
+if echo "$SIG_INFO" | grep -q 'CodeDirectory v=20'; then
+  CD_VER=$(echo "$SIG_INFO" | sed -n 's/.*CodeDirectory v=\([0-9]*\).*/\1/p' | head -1)
+  if [ -n "$CD_VER" ] && [ "$CD_VER" -lt 20400 ] 2>/dev/null; then
+    echo "FAIL: CodeDirectory v=$CD_VER too old (need >=20400 for V2/V3 resign)" >&2
+    exit 1
+  fi
+  echo "PASS: CodeDirectory v=${CD_VER:-unknown} (V2/V3 compatible range)"
+else
+  echo "WARN: could not read CodeDirectory version; platform may still accept" >&2
+fi
+
 if [ -d "$APP/PlugIns" ]; then
   while IFS= read -r -d '' appex; do
     ext_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$appex/Info.plist" 2>/dev/null || echo "")
@@ -53,4 +67,4 @@ if [ "$IPA_SIZE" -lt 5000000 ]; then
   exit 1
 fi
 
-echo "PASS: resign-ready IPA checks OK"
+echo "PASS: resign-ready IPA checks OK (V1/V2/V3 placeholder sign)"

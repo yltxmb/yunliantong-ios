@@ -1,0 +1,40 @@
+云链通 iOS — Mac / Xcode 本地打包说明
+========================================
+
+1. 解压
+   把 YunLianTong-iOS.zip 解压到任意目录，例如：
+   ~/Projects/YunLianTong-iOS/
+
+2. 安装 CocoaPods（Mac 终端）
+   sudo gem install cocoapods -v 1.15.2
+   cd ~/Projects/YunLianTong-iOS
+   pod install --repo-update
+
+3. 打开工程（务必开 .xcworkspace，不要开 .xcodeproj）
+   open TUIKitDemo.xcworkspace
+
+4. 工程关键配置
+   - 应用名：云链通
+   - Bundle ID（Release）：com.guanglian.tim
+   - 推送扩展 Bundle ID：com.guanglian.tim.pushservice
+   - 最低系统：iOS 14.0
+
+5. 真机 / 导出 IPA（给企业签平台 — 需 V1+V2+V3 兼容）
+   - Xcode → Target → Build Settings → Other Code Signing Flags 添加：
+     --generate-entitlement-der --generate-pre-encrypt-hashes
+   - Product → Archive → Distribute App → Development 或 Ad Hoc
+   - 导出 IPA 后上传企业签后台（不要传 App Store 加密包）
+   - 若平台仍拒：终端执行 bash scripts/ci-adhoc-sign-app.sh Payload/xxx.app 再 zip
+
+6. 若 TUICallKit 编译报错（Xcode 16+）
+   终端执行：bash scripts/patch-tuicallkit-swift-xcode16.sh
+   然后重新 pod install
+
+7. 重新生成品牌图标（可选）
+   cd scripts && npm install pngjs --no-save && node generate-brand-icons.js
+
+常见问题
+--------
+- pod install 慢：国内可配置 CocoaPods 镜像
+- Signing：Xcode → Signing & Capabilities 选你的 Team
+- 无 Apple 开发者账号：Archive 后把 .app 或 IPA 给企业签平台重签
