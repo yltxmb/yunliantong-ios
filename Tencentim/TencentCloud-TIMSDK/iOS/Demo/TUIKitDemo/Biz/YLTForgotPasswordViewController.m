@@ -6,7 +6,7 @@
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UITextField *phoneField;
 @property (nonatomic, strong) UITextField *answerField;
-@property (nonatomic, strong) UITextField *newPassField;
+@property (nonatomic, strong) UITextField *passwordField;
 @property (nonatomic, strong) UITextField *confirmField;
 @property (nonatomic, strong) UIPickerView *questionPicker;
 @property (nonatomic, copy) NSArray<NSString *> *questions;
@@ -44,8 +44,8 @@
     y += 130;
 
     self.answerField = [self addField:@"密保答案" y:&y width:w];
-    self.newPassField = [self addField:@"新密码" y:&y width:w];
-    self.newPassField.secureTextEntry = YES;
+    self.passwordField = [self addField:@"新密码" y:&y width:w];
+    self.passwordField.secureTextEntry = YES;
     self.confirmField = [self addField:@"确认新密码" y:&y width:w];
     self.confirmField.secureTextEntry = YES;
 
@@ -114,7 +114,7 @@
     }
     NSString *sq = self.questions[(NSUInteger)qIdx];
     NSString *sa = [self.answerField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-    NSString *np = self.newPassField.text ?: @"";
+    NSString *np = self.passwordField.text ?: @"";
     NSString *c2 = self.confirmField.text ?: @"";
     if (np.length < 6 || np.length > 128) {
         [self alert:@"密码需 6-128 位"];
