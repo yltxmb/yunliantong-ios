@@ -1,0 +1,67 @@
+# 产出未签名 IPA，供第三方企业签平台上传后重签安装（无需 GitHub Secrets）
+name: Export IPA for Resign Platform
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export-ipa:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: Tencentim/TencentCloud-TIMSDK/iOS/Demo
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods -v 1.15.2 --no-document
+          pod install --repo-update
+
+      - name: Build Release for iOS device (no code sign)
+        run: |
+          xcodebuild build \
+            -workspace TUIKitDemo.xcworkspace \
+            -scheme TUIKitDemo \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$PWD/build/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            PRODUCT_BUNDLE_IDENTIFIER=com.guanglian.tim \
+            INFOPLIST_KEY_CFBundleDisplayName="云链通" \
+            | xcpretty || true
+
+      - name: Package IPA
+        run: |
+          APP=$(find build/DerivedData -name 'TUIKitDemo.app' -type d 2>/dev/null | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::TUIKitDemo.app not found"
+            find build -type d -name '*.app' || true
+            exit 1
+          fi
+          echo "Packaging: $APP"
+          rm -rf build/ipa_out
+          mkdir -p build/ipa_out/Payload
+          ditto "$APP" build/ipa_out/Payload/TUIKitDemo.app
+          cd build/ipa_out
+          zip -qr ../YunLianTong-unsigned.ipa Payload
+          ls -lh ../YunLianTong-unsigned.ipa
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YunLianTong-IPA-unsigned
+          path: Tencentim/TencentCloud-TIMSDK/iOS/Demo/build/YunLianTong-unsigned.ipa
