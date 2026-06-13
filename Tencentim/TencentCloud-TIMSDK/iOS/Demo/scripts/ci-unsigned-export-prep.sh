@@ -24,6 +24,9 @@ perl -i -pe '
   s/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g;
   s/CODE_SIGN_ENTITLEMENTS = TUIKitDemo\/TUIKitDemo\.entitlements;/CODE_SIGN_ENTITLEMENTS = "";/g;
   s/CODE_SIGN_ENTITLEMENTS = TUIKitDemo\/ci-empty\.entitlements;/CODE_SIGN_ENTITLEMENTS = "";/g;
+  s/PRODUCT_BUNDLE_IDENTIFIER = com\.imchat\.imchat\.pushservice;/PRODUCT_BUNDLE_IDENTIFIER = com.guanglian.tim.pushservice;/g;
+  s/PRODUCT_BUNDLE_IDENTIFIER = com\.tencent\.tuikit\.demo\.xa\.pushservice;/PRODUCT_BUNDLE_IDENTIFIER = com.guanglian.tim.pushservice;/g;
+  s/PRODUCT_BUNDLE_IDENTIFIER = com\.tencent\.tuikit\.demo\.pushservice;/PRODUCT_BUNDLE_IDENTIFIER = com.guanglian.tim.pushservice;/g;
 ' "$PBX"
 
 # 真机构建时 pushservice 扩展常因描述文件失败；CI 未签名包先不嵌扩展（主 App 仍可重签安装）

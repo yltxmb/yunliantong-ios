@@ -1,4 +1,4 @@
-# 产出未签名 IPA，供第三方企业签平台上传后重签安装（无需 GitHub Secrets）
+# 产出 ad-hoc 占位签名 IPA，供第三方企业签平台重签（无需 GitHub Secrets）
 name: Export IPA for Resign Platform
 
 on:
@@ -120,10 +120,13 @@ jobs:
             echo "::error::Executable too small ($BIN_SIZE bytes) — build incomplete"
             exit 1
           fi
+          chmod +x scripts/ci-adhoc-sign-app.sh scripts/ci-validate-resign-ipa.sh
+          ./scripts/ci-adhoc-sign-app.sh "$APP"
           rm -rf build/ipa_out
           mkdir -p build/ipa_out/Payload
           ditto "$APP" "build/ipa_out/Payload/$(basename "$APP")"
           (cd build/ipa_out && zip -qr ../YunLianTong-unsigned.ipa Payload)
+          ./scripts/ci-validate-resign-ipa.sh build/YunLianTong-unsigned.ipa
           IPA_SIZE=$(stat -f%z build/YunLianTong-unsigned.ipa)
           echo "IPA size: $IPA_SIZE bytes"
           ls -lh build/YunLianTong-unsigned.ipa

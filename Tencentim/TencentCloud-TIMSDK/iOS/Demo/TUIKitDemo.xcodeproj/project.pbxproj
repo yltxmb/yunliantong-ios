@@ -1064,7 +1064,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.imchat.imchat.pushservice;
+				PRODUCT_BUNDLE_IDENTIFIER = com.guanglian.tim.pushservice;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.imchat.imchat.pushservice_Production_SignProvision;
 				SKIP_INSTALL = YES;
