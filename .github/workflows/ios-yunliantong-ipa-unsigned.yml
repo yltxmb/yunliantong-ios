@@ -34,6 +34,7 @@ jobs:
       - name: Build Release for iOS device (no code sign)
         run: |
           set -o pipefail
+          mkdir -p build
           rm -rf build/DerivedData build/ipa_out build/YunLianTong-unsigned.ipa
           xcodebuild build \
             -workspace TUIKitDemo.xcworkspace \
